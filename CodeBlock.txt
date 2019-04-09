@@ -1,0 +1,98 @@
+# Crime Frequency vs Incident Location (Heatmap) (Liam)
+    # Crime Frequency vs Police Zone (Heatmap) (Liam)
+
+    #Drop irrelevant columns
+
+heatmap_DF = full_crime_df[['Offenses Severity', 'Arrest Day of Week', 'Arrest Date', 'Arrest Month', 'Arrest Year', 'Temperature', 'Weather Condition', 'Incident Location', 'Incident Latitude', 'Incident Longitude', 'Incident Neighborhood', 'Incident Zone']]
+heatmap_DF.head()
+
+import geopandas as gpd
+import folium
+
+#Pull Pittsburgh City Borders
+congr_districts = gpd.read_file("Resources/cb_2015_us_cd114_20m")
+congr_districts.crs = {'datum': 'NAD83', 'ellps': 'GRS80', 'proj':'longlat', 'no_defs':True}
+
+district14 = congr_districts[ congr_districts.GEOID == '4214' ]  # 42 = PA, 14 = District
+
+#Create folium map config
+distric_map = folium.Map(location=[40, -80], zoom_start=9, tiles='cartodbpositron' )
+print('default map crs: ',distric_map.crs)
+
+district14 = district14.to_crs({'init':'epsg:3857'})
+
+#Create Folium Map
+folium.GeoJson(district14).add_to(distric_map)
+distric_map
+
+#Round and group coordinates
+heatmap_DF["Rounded Lat"] = round(heatmap_DF["Incident Latitude"], 2)
+heatmap_DF["Rounded Long"] = round(heatmap_DF["Incident Longitude"], 2)
+heatmap_DF2 = heatmap_DF.groupby(["Rounded Lat", "Rounded Long"]).count()
+heatmap_DF2 = heatmap_DF2.reset_index()
+heatmap_DF2.head()
+
+import folium
+from folium.plugins import HeatMap
+
+#Create heatmap, base column doesnt matter
+max_amount = float(heatmap_DF2["Temperature"].max())
+
+hmap = folium.Map(location=[40.0, -80], zoom_start=7, )
+
+hm_wide = HeatMap( list(zip(heatmap_DF2["Rounded Lat"].values, heatmap_DF2["Rounded Long"].values, heatmap_DF2.Temperature.values)), 
+                   min_opacity=0.2,
+                   max_val=max_amount,
+                   radius=17, blur=15, 
+                   max_zoom=1, 
+                 )
+
+folium.GeoJson(district14).add_to(hmap)
+hmap.add_child(hm_wide)
+
+
+
+# Crime Severity vs Incident Location (Heatmap) (Liam)
+
+#TODO code that seperates felonies from misdemeanors
+
+
+#heatmap_DF3 = heatmap_DF2[]
+
+
+
+#For Felonies
+import folium
+from folium.plugins import HeatMap
+
+max_amount = float(heatmap_DF3["Felonies"].max())
+
+hmap = folium.Map(location=[40.0, -80], zoom_start=7, )
+
+hm_wide = HeatMap( list(zip(heatmap_DF3["Rounded Lat"].values, heatmap_DF3["Rounded Long"].values, heatmap_DF3.Felonies.values)), 
+                   min_opacity=0.2,
+                   max_val=max_amount,
+                   radius=17, blur=15, 
+                   max_zoom=1, 
+                 )
+
+folium.GeoJson(district14).add_to(hmap)
+hmap.add_child(hm_wide)
+
+#For Misdemeanors
+import folium
+from folium.plugins import HeatMap
+
+max_amount = float(heatmap_DF3["Misdemeanors"].max())
+
+hmap = folium.Map(location=[40.0, -80], zoom_start=7, )
+
+hm_wide = HeatMap( list(zip(heatmap_DF3["Rounded Lat"].values, heatmap_DF2["Rounded Long"].values, heatmap_DF3.Misdemeanors.values)), 
+                   min_opacity=0.2,
+                   max_val=max_amount,
+                   radius=17, blur=15, 
+                   max_zoom=1, 
+                 )
+
+folium.GeoJson(district14).add_to(hmap)
+hmap.add_child(hm_wide)
